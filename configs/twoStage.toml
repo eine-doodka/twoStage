@@ -1,0 +1,3 @@
+redis_addr = "localhost:6379"
+storage_duration = "20s"
+code_length = 6

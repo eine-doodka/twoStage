@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  redis:
+    container_name: redis_container
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    image: bitnami/redis
+    ports:
+      - "6379:6379"

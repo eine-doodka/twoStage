@@ -15,22 +15,27 @@ const (
 type Server struct {
 	router *mux.Router
 	log    *logrus.Logger
-	handle Handlers
+	handle *Handlers
 }
 
-func NewServer() *Server {
+func NewServer(handlers *Handlers) *Server {
 	s := &Server{
 		router: mux.NewRouter(),
 		log:    logrus.New(),
+		handle: handlers,
 	}
 	s.configureRouter()
 	return s
 }
 
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.router.ServeHTTP(w, r)
+}
+
 func (s *Server) configureRouter() {
 	s.router.Use(s.loggingMw)
 	s.router.Handle("/init", s.handle.handleInit()).Methods("GET")
-	s.router.Handle("/commit/{id}", s.handle.handleCommit()).Methods("POST")
+	s.router.Handle("/commit", s.handle.handleCommit()).Methods("POST")
 	s.router.PathPrefix("/").Handler(s.defaultAnswer())
 }
 
@@ -46,9 +51,12 @@ func (s *Server) loggingMw(next http.Handler) http.Handler {
 				"remote_addr": r.RemoteAddr,
 				"request_id":  reqId,
 			})
-		wr := CustomWriter{w, http.StatusOK}
+		wr := &CustomWriter{w, http.StatusOK, []byte{}}
 		next.ServeHTTP(wr, r.WithContext(ctx))
 		logger.Infof("Response with code %v: %v", wr.code, http.StatusText(wr.code))
+		if wr.code >= 500 {
+			logger.Warnf("Server-side error with body: %v", string(wr.body))
+		}
 	})
 }
 
